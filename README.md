@@ -1,4 +1,9 @@
-# Cais
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/logo-dark.svg">
+    <img src="docs/assets/logo-light.svg" alt="Cais" width="240">
+  </picture>
+</h1>
 
 Declarative application operations for people and agents, using Rust, JSON and SSH.
 
