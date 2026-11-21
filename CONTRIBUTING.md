@@ -22,14 +22,14 @@ python tools/export_schemas.py --client target/debug/cais --check
 compile to stubs that say so. A Linux build depends on the glibc of the machine that
 built it, so build on a system no newer than the host that will run it. From Windows
 or macOS, build them in a container with the source mounted, as described in
-[README.md](README.md#verification).
+[docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 On Windows the client is `target/debug/cais.exe`. The files in `schemas/` are generated
 from the Rust types: after changing a configuration type, regenerate them with
 `tools/export_schemas.py` and commit the result.
 
 The SSH and integration journeys need Docker and run only against disposable local
-fixtures. The commands are in [README.md](README.md#verification) and
+fixtures. The commands are in [docs/VERIFICATION.md](docs/VERIFICATION.md) and
 [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md). Never point a
 verification tool at a machine you use.
 
