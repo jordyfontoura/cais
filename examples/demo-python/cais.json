@@ -1,0 +1,6 @@
+{
+  "schema_version": 1,
+  "project": "hello-python",
+  "artifact": { "directory": "./dist", "publish": ["app.py"] },
+  "app": { "kind": "http", "runtime": "python", "entrypoint": "app.py", "health": "/health" }
+}

@@ -1,0 +1,27 @@
+[package]
+name = "cais-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "cais"
+path = "src/main.rs"
+
+[dependencies]
+cais-core.workspace = true
+cais-protocol.workspace = true
+cais-artifacts.workspace = true
+sha2.workspace = true
+clap.workspace = true
+tempfile.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

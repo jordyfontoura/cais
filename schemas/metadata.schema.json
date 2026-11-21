@@ -1,0 +1,61 @@
+{
+  "$defs": {
+    "LabelValue": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "SchemaVersion": {
+      "const": 1,
+      "type": "integer"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Presentation metadata a project publishes for catalog consumers. It never carries\nunits, paths, commands or credentials; those come from the host's own records.",
+  "properties": {
+    "$schema": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "labels": {
+      "additionalProperties": {
+        "$ref": "#/$defs/LabelValue"
+      },
+      "description": "Free-form hints for consumers, for example an opt-in a dashboard understands.\nCais stores and publishes them without interpreting any.",
+      "type": "object"
+    },
+    "schema_version": {
+      "$ref": "#/$defs/SchemaVersion"
+    },
+    "title": {
+      "type": "string"
+    },
+    "url": {
+      "description": "HTTPS address on the project's own declared hostname.",
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "title"
+  ],
+  "title": "ProjectMetadata",
+  "type": "object"
+}

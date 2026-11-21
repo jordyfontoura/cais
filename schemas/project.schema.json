@@ -1,0 +1,180 @@
+{
+  "$defs": {
+    "App": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "entrypoint": {
+              "type": "string"
+            },
+            "health": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "http",
+              "type": "string"
+            },
+            "runtime": {
+              "$ref": "#/$defs/Runtime"
+            }
+          },
+          "required": [
+            "kind",
+            "runtime",
+            "entrypoint",
+            "health"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "static",
+              "type": "string"
+            },
+            "public": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "public"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "directory": {
+          "type": "string"
+        },
+        "executables": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "publish": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "directory",
+        "publish"
+      ],
+      "type": "object"
+    },
+    "Data": {
+      "additionalProperties": false,
+      "properties": {
+        "backup": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "preserve": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "Exposure": {
+      "additionalProperties": false,
+      "properties": {
+        "access_profile": {
+          "type": "string"
+        },
+        "host": {
+          "type": "string"
+        },
+        "path": {
+          "description": "`/` for the whole host, or a prefix such as `/docs`. A hostname belongs to one project.",
+          "type": "string"
+        },
+        "strip_prefix": {
+          "description": "Remove the prefix before the request reaches an HTTP application. Static sites\nare always served relative to the prefix.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "host",
+        "path",
+        "access_profile"
+      ],
+      "type": "object"
+    },
+    "Runtime": {
+      "enum": [
+        "binary",
+        "node",
+        "python"
+      ],
+      "type": "string"
+    },
+    "SchemaVersion": {
+      "const": 1,
+      "type": "integer"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "app": {
+      "$ref": "#/$defs/App"
+    },
+    "artifact": {
+      "$ref": "#/$defs/Artifact"
+    },
+    "data": {
+      "$ref": "#/$defs/Data",
+      "default": {
+        "backup": [],
+        "preserve": []
+      }
+    },
+    "exposure": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Exposure"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "project": {
+      "type": "string"
+    },
+    "schema_version": {
+      "$ref": "#/$defs/SchemaVersion"
+    }
+  },
+  "required": [
+    "schema_version",
+    "project",
+    "artifact",
+    "app"
+  ],
+  "title": "ProjectConfig",
+  "type": "object"
+}

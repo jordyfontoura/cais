@@ -1,0 +1,7 @@
+{
+  "$schema": "../schemas/project.schema.json",
+  "schema_version": 1,
+  "project": "website",
+  "artifact": { "directory": "./dist", "publish": ["public"] },
+  "app": { "kind": "static", "public": "public" }
+}

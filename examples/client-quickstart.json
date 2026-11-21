@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "targets": {
+    "operator": {
+      "ssh": "alice@server.example.org",
+      "port": 22,
+      "server_path": "/usr/local/bin/cais-server",
+      "known_hosts": "./known_hosts",
+      "identity_file": "./operator_key",
+      "timeout_seconds": 15
+    }
+  }
+}

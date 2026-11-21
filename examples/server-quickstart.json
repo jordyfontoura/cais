@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "host": {
+    "paths": {
+      "apps": "/srv/cais-apps",
+      "state": "/var/lib/cais",
+      "config": "/etc/cais-apps",
+      "data": "/var/lib/cais-data"
+    },
+    "ports": { "first": 8200, "last": 8299 },
+    "runtimes": { "python": "/usr/bin/python3" }
+  },
+  "operators": { "alice": { "create": true } },
+  "projects": {}
+}

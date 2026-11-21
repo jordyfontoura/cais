@@ -1,0 +1,22 @@
+{
+  "$schema": "../schemas/project.schema.json",
+  "schema_version": 1,
+  "project": "example",
+  "artifact": {
+    "directory": "./dist-linux",
+    "publish": ["api", "public"],
+    "executables": ["api"]
+  },
+  "app": {
+    "kind": "http",
+    "runtime": "binary",
+    "entrypoint": "api",
+    "health": "/health"
+  },
+  "exposure": {
+    "host": "api.example.org",
+    "path": "/",
+    "access_profile": "private"
+  },
+  "data": { "preserve": ["uploads"], "backup": [] }
+}

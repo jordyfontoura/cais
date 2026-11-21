@@ -1,0 +1,588 @@
+{
+  "$defs": {
+    "AccessProfile": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "private",
+              "type": "string"
+            },
+            "provider": {
+              "type": "string"
+            },
+            "snippet": {
+              "description": "Administrator-written proxy snippet imported into this profile's routes.",
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "kind",
+            "provider"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "public",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "BackupSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "check": {
+          "description": "Optional administrator-installed executable: `<check> <project>`. Exit 0 means the\nlatest backup covered the manifest, 3 means it did not; anything else is a failure.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "manifests": {
+          "default": "/var/lib/cais-backup",
+          "description": "Dedicated directory of nonsecret manifests, one per project.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "CaddySettings": {
+      "additionalProperties": false,
+      "properties": {
+        "caddyfile": {
+          "default": "/etc/caddy/Caddyfile",
+          "description": "Administrator-owned main configuration. Validated as a whole, never modified.",
+          "type": "string"
+        },
+        "executable": {
+          "default": "/usr/bin/caddy",
+          "type": "string"
+        },
+        "group": {
+          "default": "caddy",
+          "description": "Group given read access to exposed static sites.",
+          "type": "string"
+        },
+        "routes": {
+          "default": "/etc/caddy/cais",
+          "description": "Dedicated directory the administrator imports once, e.g. `import /etc/caddy/cais/*.caddy`.",
+          "type": "string"
+        },
+        "unit": {
+          "default": "caddy.service",
+          "description": "systemd unit reloaded after a route change.",
+          "type": "string"
+        },
+        "user": {
+          "default": "caddy",
+          "description": "Account the proxy runs as; configuration checks run with this identity, not root.",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "CatalogSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "directory": {
+          "default": "/var/lib/cais-catalog",
+          "description": "Dedicated directory holding `catalog.json`.",
+          "type": "string"
+        },
+        "group": {
+          "description": "When set, only root and this group can read the catalog; otherwise any local account.",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "ExternalApp": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "service",
+              "type": "string"
+            },
+            "unit": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "unit"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "const": "static",
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "ExternalProject": {
+      "additionalProperties": false,
+      "properties": {
+        "app": {
+          "$ref": "#/$defs/ExternalApp"
+        },
+        "databases": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "directory": {
+          "description": "Display-only references; Cais never reads application files or connects to these databases.",
+          "type": "string"
+        },
+        "operators": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "operators",
+        "app",
+        "directory"
+      ],
+      "type": "object"
+    },
+    "HostLimits": {
+      "additionalProperties": false,
+      "properties": {
+        "command_seconds": {
+          "default": 60,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "cpu_percent": {
+          "default": 100,
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "database_session_seconds": {
+          "default": 3600,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "entries": {
+          "default": 50000,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "execution_seconds": {
+          "default": 180,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "expanded_mb": {
+          "default": 512,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "memory_mb": {
+          "default": 512,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tasks": {
+          "default": 128,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "upload_mb": {
+          "default": 128,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "upload_seconds": {
+          "default": 120,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "HostPaths": {
+      "additionalProperties": false,
+      "properties": {
+        "apps": {
+          "type": "string"
+        },
+        "broker": {
+          "default": "/usr/local/libexec/cais/cais-broker",
+          "type": "string"
+        },
+        "config": {
+          "type": "string"
+        },
+        "data": {
+          "default": "/var/lib/cais-data",
+          "type": "string"
+        },
+        "server": {
+          "default": "/usr/local/bin/cais-server",
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "sudoers": {
+          "default": "/etc/sudoers.d",
+          "type": "string"
+        },
+        "units": {
+          "default": "/etc/systemd/system",
+          "type": "string"
+        }
+      },
+      "required": [
+        "apps",
+        "state",
+        "config"
+      ],
+      "type": "object"
+    },
+    "HostSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "backup": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BackupSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional backup adapter: manifests any tool can read, plus an optional coverage check."
+        },
+        "caddy": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CaddySettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional reverse proxy. Cais writes only inside `routes`; the main file is never edited."
+        },
+        "catalog": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CatalogSettings"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Optional catalog of projects for dashboards and other read-only consumers."
+        },
+        "limits": {
+          "$ref": "#/$defs/HostLimits",
+          "default": {
+            "command_seconds": 60,
+            "cpu_percent": 100,
+            "database_session_seconds": 3600,
+            "entries": 50000,
+            "execution_seconds": 180,
+            "expanded_mb": 512,
+            "memory_mb": 512,
+            "tasks": 128,
+            "upload_mb": 128,
+            "upload_seconds": 120
+          }
+        },
+        "paths": {
+          "$ref": "#/$defs/HostPaths"
+        },
+        "ports": {
+          "$ref": "#/$defs/PortRange",
+          "default": {
+            "first": 8200,
+            "last": 8299
+          }
+        },
+        "postgres": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PostgresSettings"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "runtimes": {
+          "$ref": "#/$defs/Runtimes",
+          "default": {
+            "node": null,
+            "python": null
+          }
+        }
+      },
+      "required": [
+        "paths"
+      ],
+      "type": "object"
+    },
+    "OperatorPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "access_profiles": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "backup": {
+          "default": false,
+          "type": "boolean"
+        },
+        "create": {
+          "default": false,
+          "type": "boolean"
+        },
+        "database": {
+          "default": false,
+          "type": "boolean"
+        },
+        "domain_suffixes": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "share_with": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "PortRange": {
+      "additionalProperties": false,
+      "properties": {
+        "first": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "last": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "first",
+        "last"
+      ],
+      "type": "object"
+    },
+    "PostgresSettings": {
+      "additionalProperties": false,
+      "properties": {
+        "admin_database": {
+          "default": "postgres",
+          "type": "string"
+        },
+        "connection_limit": {
+          "default": 5,
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "hba_directory": {
+          "default": "/etc/cais/postgres-hba",
+          "type": "string"
+        },
+        "os_user": {
+          "default": "postgres",
+          "type": "string"
+        },
+        "port": {
+          "default": 5432,
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": "integer"
+        },
+        "psql": {
+          "default": "/usr/bin/psql",
+          "type": "string"
+        },
+        "role_prefix": {
+          "default": "cais_",
+          "type": "string"
+        },
+        "socket_directory": {
+          "default": "/var/run/postgresql",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "ProjectPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "access_profiles": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "backup": {
+          "default": false,
+          "type": "boolean"
+        },
+        "database": {
+          "default": false,
+          "type": "boolean"
+        },
+        "hosts": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "operators": {
+          "description": "Operating-system account names. Identity never comes from a request.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "operators"
+      ],
+      "type": "object"
+    },
+    "Runtimes": {
+      "additionalProperties": false,
+      "properties": {
+        "node": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "python": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "SchemaVersion": {
+      "const": 1,
+      "type": "integer"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "access_profiles": {
+      "additionalProperties": {
+        "$ref": "#/$defs/AccessProfile"
+      },
+      "default": {},
+      "type": "object"
+    },
+    "external_projects": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ExternalProject"
+      },
+      "description": "Explicit references to existing installations. Read-only; never adopted.",
+      "type": "object"
+    },
+    "host": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/HostSettings"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "operators": {
+      "additionalProperties": {
+        "$ref": "#/$defs/OperatorPolicy"
+      },
+      "default": {},
+      "type": "object"
+    },
+    "projects": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ProjectPolicy"
+      },
+      "description": "Administrative policies, not projects adopted from the filesystem.",
+      "type": "object"
+    },
+    "schema_version": {
+      "$ref": "#/$defs/SchemaVersion"
+    }
+  },
+  "required": [
+    "schema_version",
+    "projects"
+  ],
+  "title": "ServerConfig",
+  "type": "object"
+}

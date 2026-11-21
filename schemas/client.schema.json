@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "SchemaVersion": {
+      "const": 1,
+      "type": "integer"
+    },
+    "Target": {
+      "additionalProperties": false,
+      "properties": {
+        "identity_file": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "known_hosts": {
+          "type": "string"
+        },
+        "port": {
+          "description": "When omitted, preserve the Port configured in the OpenSSH alias.",
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "server_path": {
+          "type": "string"
+        },
+        "ssh": {
+          "description": "A verified OpenSSH alias or user@host, never shell syntax.",
+          "type": "string"
+        },
+        "ssh_config": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ssh_executable": {
+          "description": "Optional local OpenSSH executable. Windows defaults to native System32 OpenSSH.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "timeout_seconds": {
+          "default": 15,
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ssh",
+        "server_path",
+        "known_hosts"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "$ref": "#/$defs/SchemaVersion"
+    },
+    "targets": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Target"
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "schema_version",
+    "targets"
+  ],
+  "title": "ClientConfig",
+  "type": "object"
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "projects": {
+    "example": {
+      "operators": ["operator"],
+      "hosts": ["api.example.org"],
+      "access_profiles": ["private"],
+      "backup": false
+    },
+    "website": { "operators": ["operator"] }
+  },
+  "access_profiles": {
+    "private": { "kind": "private", "provider": "sso" }
+  }
+}

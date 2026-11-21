@@ -1,0 +1,8 @@
+{
+  "$schema": "../schemas/metadata.schema.json",
+  "schema_version": 1,
+  "title": "Example API",
+  "description": "Internal service used by the example project.",
+  "url": "https://api.example.org/",
+  "labels": { "dashboard": true, "tier": "internal" }
+}
