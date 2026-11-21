@@ -563,7 +563,7 @@ fn execute(command: &Command) -> Result<(Value, bool)> {
                 project: project.project.clone(),
                 expected: expected_from(expected)?,
                 compressed_bytes: size,
-                sha256: format!("{:x}", hash.finalize()),
+                sha256: cais_core::hex(hash.finalize()),
                 configuration_sha256: cais_core::configuration_sha256(&project)?,
             };
             let settings = decode_config::<ClientConfig>(&read_config(config)?)?;

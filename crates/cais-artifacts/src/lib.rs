@@ -42,6 +42,18 @@ fn invalid() -> CaisError {
         "Artifact is invalid, exceeds limits, or conflicts with publication policy.",
     )
 }
+fn file_sha256(path: &Path) -> Result<String> {
+    let mut file = File::open(path).map_err(io_error)?;
+    let mut hash = Sha256::new();
+    let mut buffer = [0; 65_536];
+    loop {
+        let count = file.read(&mut buffer).map_err(io_error)?;
+        if count == 0 {
+            return Ok(cais_core::hex(hash.finalize()));
+        }
+        hash.update(&buffer[..count]);
+    }
+}
 fn io_error(_: std::io::Error) -> CaisError {
     CaisError::new(ErrorCode::Internal, "Artifact I/O failed.")
 }
@@ -237,10 +249,8 @@ pub fn package(
             .sync_all()
             .map_err(io_error)?;
         let size = fs::metadata(output).map_err(io_error)?.len();
-        let mut hash = Sha256::new();
-        std::io::copy(&mut File::open(output).map_err(io_error)?, &mut hash).map_err(io_error)?;
         Ok(Descriptor {
-            sha256: format!("{:x}", hash.finalize()),
+            sha256: file_sha256(output)?,
             compressed_bytes: size,
             expanded_bytes: expanded,
             entries: files.len(),
@@ -414,11 +424,8 @@ pub fn stage_before(
         {
             return Err(invalid());
         }
-        let mut hash = Sha256::new();
-        std::io::copy(&mut File::open(archive_path).map_err(io_error)?, &mut hash)
-            .map_err(io_error)?;
         Ok(Descriptor {
-            sha256: format!("{:x}", hash.finalize()),
+            sha256: file_sha256(archive_path)?,
             compressed_bytes: size,
             expanded_bytes: expanded,
             entries: seen.len(),

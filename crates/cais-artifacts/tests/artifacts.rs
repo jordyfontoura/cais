@@ -198,6 +198,9 @@ fn deterministic_package_and_unprivileged_stage_preserve_bytes_and_explicit_mode
     let b = package(root.path(), &config, &second, Limits::default()).unwrap();
     assert_eq!(a.sha256, b.sha256);
     assert_eq!(fs::read(&first).unwrap(), fs::read(&second).unwrap());
+    // The digest read in blocks equals the digest of the whole archive.
+    let whole = <sha2::Sha256 as sha2::Digest>::digest(fs::read(&first).unwrap());
+    assert_eq!(a.sha256, cais_core::hex(whole));
     let stage_dir = root.path().join("stage");
     let staged = stage(&first, &stage_dir, &config, Limits::default()).unwrap();
     // The fixture contains two regular files and their public directory.

@@ -298,3 +298,13 @@ fn exposure_accepts_the_root_or_a_plain_prefix() {
             .contains("strip_prefix")
     );
 }
+
+#[test]
+fn digests_are_written_as_lowercase_hexadecimal() {
+    assert_eq!(cais_core::hex([0x00, 0x0f, 0xab]), "000fab");
+    // FIPS 180-2 test vector.
+    assert_eq!(
+        cais_core::hex(<sha2::Sha256 as sha2::Digest>::digest(b"abc")),
+        "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+    );
+}
