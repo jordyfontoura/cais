@@ -1154,6 +1154,12 @@ impl Host {
                 _ => "unknown".into(),
             }
         };
+        let listener = record.port.map(|port| {
+            self.runtime_uid(&record)
+                .and_then(|owner| listener(port, owner))
+                .unwrap_or("unknown")
+                .to_owned()
+        });
         let busy = self.operation_lock_held(&record.project.project)?;
         let requires_inspection = record.last_operation.as_ref().is_some_and(|op| {
             matches!(op.state, OperationState::Unknown)
@@ -1173,6 +1179,7 @@ impl Host {
             deploy_user: record.deploy_user,
             port: record.port,
             service,
+            listener,
             last_operation: record.last_operation,
             operation_lock_held: busy,
             requires_inspection,
@@ -1301,15 +1308,7 @@ impl Host {
         let until = (Instant::now() + Duration::from_secs(25)).min(self.execution_deadline.get());
         let port = record.port.ok_or_else(internal)?;
         let address = SocketAddr::from((Ipv4Addr::LOCALHOST, port));
-        let owner = command(
-            "/usr/bin/id",
-            &["-u", "--", &record.runtime_user],
-            self.timeout().min(10),
-        )?
-        .text
-        .trim()
-        .parse::<u32>()
-        .map_err(|_| internal())?;
+        let owner = self.runtime_uid(record)?;
         while Instant::now() < until {
             if let Ok(mut stream) = TcpStream::connect_timeout(&address, Duration::from_millis(300))
             {
@@ -1337,13 +1336,19 @@ impl Host {
                     {
                         // The port is loopback, where any local account can listen. An
                         // answer counts only when the project's own account holds the port.
-                        if listeners_owned_by(port, owner)? {
-                            return Ok(());
-                        }
-                        return Err(CaisError::new(
-                            ErrorCode::OperationFailed,
-                            "Another process answers on the application port; inspect the host.",
-                        ));
+                        return match listener(port, owner)? {
+                            "loopback" => Ok(()),
+                            // Reachable without the proxy, so an access profile would
+                            // not protect it.
+                            "exposed" => Err(CaisError::new(
+                                ErrorCode::OperationFailed,
+                                "The application listens beyond loopback; bind it to 127.0.0.1.",
+                            )),
+                            _ => Err(CaisError::new(
+                                ErrorCode::OperationFailed,
+                                "Another process answers on the application port; inspect the host.",
+                            )),
+                        };
                     }
                 }
             }
@@ -1353,6 +1358,17 @@ impl Host {
             ErrorCode::OperationFailed,
             "Application health was not confirmed; inspect status. Files may have changed.",
         ))
+    }
+    fn runtime_uid(&self, record: &Record) -> Result<u32> {
+        command(
+            "/usr/bin/id",
+            &["-u", "--", &record.runtime_user],
+            self.timeout().min(10),
+        )?
+        .text
+        .trim()
+        .parse()
+        .map_err(|_| internal())
     }
     fn lock(&self, project: &str) -> Result<File> {
         if !identifier(project) {
@@ -1538,9 +1554,11 @@ fn atomic_write_group(path: &Path, bytes: &[u8], mode: u32, gid: Option<u32>) ->
         .sync_all()
         .map_err(io_error)
 }
-/// Whether the port has listeners and all of them belong to one account.
-fn listeners_owned_by(port: u16, owner: u32) -> Result<bool> {
-    let mut found = false;
+/// Who listens on the port: `loopback` when only the given account does, and only on
+/// loopback addresses; `foreign` when another account holds it; `exposed` when the
+/// account also listens on other addresses; `absent` when nothing listens.
+fn listener(port: u16, owner: u32) -> Result<&'static str> {
+    let (mut found, mut exposed) = (false, false);
     for table in ["/proc/net/tcp", "/proc/net/tcp6"] {
         let file = match File::open(table) {
             Ok(file) => file,
@@ -1552,23 +1570,31 @@ fn listeners_owned_by(port: u16, owner: u32) -> Result<bool> {
             let line = line.map_err(io_error)?;
             let fields: Vec<_> = line.split_whitespace().collect();
             // sl local remote state queues timer retransmit uid ...; state 0A is LISTEN.
-            if fields.len() < 8
-                || fields[3] != "0A"
-                || fields[1]
-                    .rsplit(':')
-                    .next()
-                    .and_then(|text| u16::from_str_radix(text, 16).ok())
-                    != Some(port)
-            {
+            if fields.len() < 8 || fields[3] != "0A" {
+                continue;
+            }
+            let Some((address, text)) = fields[1].rsplit_once(':') else {
+                continue;
+            };
+            if u16::from_str_radix(text, 16).ok() != Some(port) {
                 continue;
             }
             if fields[7].parse::<u32>().ok() != Some(owner) {
-                return Ok(false);
+                return Ok("foreign");
             }
             found = true;
+            // Addresses are printed as host-order words: 127.0.0.0/8, ::1 and the
+            // IPv4-mapped form of the former.
+            exposed |= !(address.len() == 8 && address.ends_with("7F")
+                || address == "00000000000000000000000001000000"
+                || (address.starts_with("0000000000000000FFFF0000") && address.ends_with("7F")));
         }
     }
-    Ok(found)
+    Ok(match (found, exposed) {
+        (false, _) => "absent",
+        (true, true) => "exposed",
+        (true, false) => "loopback",
+    })
 }
 
 struct Output {

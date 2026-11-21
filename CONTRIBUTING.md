@@ -58,5 +58,6 @@ broker or to the Linux host code should come with a journey against a disposable
 ## Licensing
 
 Contributions are accepted under the [Apache License 2.0](LICENSE), as stated in its
-section 5. New dependencies must have a compatible license and be reflected in
+section 5. New dependencies must have a compatible license (CI checks them against
+`deny.toml`) and be reflected in
 [NOTICE](NOTICE) where it applies.

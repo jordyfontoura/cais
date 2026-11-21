@@ -167,7 +167,9 @@ Do not edit registry JSON by hand to skip these checks.
 Administrative command errors contain fixed
 diagnostics, never child stderr. A healthy deployment requires HTTP 200 on the configured
 loopback health endpoint, and every listener on that port must belong to the project's
-runtime account: an answer from another local process is refused. Restart also verifies that endpoint; static publication checks
+runtime account and be on a loopback address: an answer from another local process is
+refused, and so is an application that listens on other interfaces. `status` reports
+this as `listener`: `loopback`, `absent`, `exposed`, `foreign` or `unknown`. Restart also verifies that endpoint; static publication checks
 the public directory, not HTTP health.
 
 Reverse-proxy routes and backup registration are optional and described in

@@ -57,9 +57,9 @@ These are documented behaviour, not vulnerabilities:
 * A request ID is not an exactly-once guarantee, and an interrupted mutation reports an
   unknown outcome rather than a result.
 * Application ports are loopback ports, not private ones: any local account can connect
-  to them, and an application that listens on every interface is reachable unless a
-  firewall blocks the port range. A deployment or restart is confirmed only when the
-  project's own runtime account holds the port.
+  to them. A deployment or restart is confirmed only when the project's own runtime
+  account holds the port and listens on loopback alone. This is checked, not enforced:
+  between two checks an application can open another listener, which `status` reports.
 * Any identity admitted to the server can learn whether a project name is registered.
 * A delegation removed from the policy stops new operations at once. What was already
   done stays: a published route, a created database, a registered manifest.

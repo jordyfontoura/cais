@@ -107,6 +107,10 @@ pub struct Status {
     pub deploy_user: String,
     pub port: Option<u16>,
     pub service: String,
+    /// Who holds the application port: `loopback`, `absent`, `exposed` beyond loopback,
+    /// `foreign` when another account listens there, or `unknown`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub listener: Option<String>,
     pub last_operation: Option<OperationStatus>,
     pub operation_lock_held: bool,
     pub requires_inspection: bool,

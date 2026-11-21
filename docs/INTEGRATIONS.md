@@ -70,9 +70,10 @@ project's `hosts`. The delegation is checked again at every `proxy-apply`, so re
 it from the policy stops further publication. A route that is already published stays
 until `proxy-remove`.
 
-An HTTP application must listen on loopback only. Cais gives it a port and does not
-confine it: an application that listens on every interface is reachable directly on
-that port unless a host firewall blocks the configured port range.
+An HTTP application must listen on loopback only. A deployment or restart is refused
+when the application listens on another address, and `status` reports `listener:
+"exposed"` if it starts doing so later. Cais detects this; it does not confine the
+application, so a host firewall on the configured port range is still good practice.
 
 ### Publishing a route
 

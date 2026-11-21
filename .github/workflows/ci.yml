@@ -4,6 +4,9 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    # Advisories are published at any time, so dependencies are checked weekly too.
+    - cron: "17 6 * * 1"
 permissions:
   contents: read
 concurrency:
@@ -70,6 +73,18 @@ jobs:
         run: cargo "+$RUST_TOOLCHAIN" build --locked --bin cais --bin cais-server
       - name: Client journey over the system OpenSSH
         run: python3 tools/verify_client.py
+  dependencies:
+    # Known vulnerabilities, yanked versions, licences and sources of every dependency.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: EmbarkStudios/cargo-deny-action@17aeb3c839e42274e2b8adf721c8c65edfdc74dd # v2.1.3
+        with:
+          command: check
+          arguments: --locked
   msrv:
     runs-on: ubuntu-24.04
     timeout-minutes: 15

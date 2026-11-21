@@ -367,12 +367,24 @@ squatter=$!
 sleep 1
 expect "the other process answers the health path" "$(curl --silent --max-time 3 "http://127.0.0.1:$port/health")" squatter
 status flaky
+expect "status names a port held by another account" "$(field flaky .data.listener)" foreign
 expect "an answer from another account is not taken for the application" "$(restart flaky)" 7
 expect "the refusal names the cause" "$(jq -r .error.message "$HOME/last.json")" \
   "Another process answers on the application port; inspect the host."
 kill "$squatter"; wait "$squatter" 2>/dev/null || true
 status flaky
 expect "the application returns once the port is free" "$(restart flaky)" 0
+status flaky
+expect "status shows the application alone on loopback" "$(field flaky .data.listener)" loopback
+sed 's/"127.0.0.1"/"0.0.0.0"/' /fixture/app.py > "$HOME/flaky/dist/app.py"
+grep -q '"0.0.0.0"' "$HOME/flaky/dist/app.py" || fail "the fixture application no longer binds 127.0.0.1"
+expect "an application that listens on every interface is refused" "$(publish flaky)" 7
+expect "the refusal says how to fix it" "$(jq -r .error.message "$HOME/last.json")" \
+  "The application listens beyond loopback; bind it to 127.0.0.1."
+status flaky
+expect "status reports the exposed listener" "$(field flaky .data.listener)" exposed
+cp /fixture/app.py "$HOME/flaky/dist/app.py"
+expect "the corrected application deploys" "$(publish flaky)" 0
 
 # --- A delegation removed from the policy stops at once -------------------------------
 policy_edit() { # jq filter

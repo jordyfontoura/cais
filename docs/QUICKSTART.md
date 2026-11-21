@@ -24,6 +24,14 @@ against `SHA256SUMS` from the same release:
 sha256sum --check --ignore-missing SHA256SUMS
 ```
 
+The checksum shows the download is intact. To check that an archive was built by this
+repository's release workflow, verify its signed provenance with the GitHub CLI
+(available for releases after 0.1.0-beta.1):
+
+```sh
+gh attestation verify cais-VERSION-linux-x86_64.tar.gz --repo jordyfontoura/cais
+```
+
 Every archive also carries this documentation, the examples and the schemas. The Linux
 binaries need glibc 2.36 or newer (Debian 12, Ubuntu 24.04 and later). To build from
 source instead, see [CONTRIBUTING.md](../CONTRIBUTING.md); the server and the broker
