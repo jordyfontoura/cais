@@ -26,7 +26,18 @@ pub fn configuration_sha256(project: &ProjectConfig) -> Result<String> {
         .to_owned();
     let bytes = serde_json::to_vec(&normalized)
         .map_err(|_| CaisError::new(ErrorCode::Internal, "Configuration serialization failed."))?;
-    Ok(format!("{:x}", Sha256::digest(bytes)))
+    Ok(hex(Sha256::digest(bytes)))
+}
+
+/// Lowercase hexadecimal text of a digest.
+pub fn hex(bytes: impl AsRef<[u8]>) -> String {
+    use std::fmt::Write;
+    let bytes = bytes.as_ref();
+    let mut text = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        let _ = write!(text, "{byte:02x}");
+    }
+    text
 }
 
 impl Default for Capabilities {

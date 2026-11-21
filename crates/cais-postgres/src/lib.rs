@@ -2,7 +2,7 @@
 //! Administrative provisioning is not wired into capabilities until verified.
 use base64::{Engine, engine::general_purpose::STANDARD};
 use cais_core::{CaisError, ErrorCode, PostgresSettings, Result, Validate};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -35,7 +35,7 @@ impl Credentials {
         let mut bytes = [0; 32];
         getrandom::fill(&mut bytes).map_err(|_| internal())?;
         let password: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
-        let digest = format!("{:x}", Sha256::digest(project.as_bytes()));
+        let digest = cais_core::hex(Sha256::digest(project.as_bytes()));
         let name = format!("{}{}", settings.role_prefix, &digest[..12]);
         Ok(Self {
             host: "127.0.0.1".into(),

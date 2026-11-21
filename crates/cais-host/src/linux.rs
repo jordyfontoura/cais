@@ -735,7 +735,7 @@ impl Host {
             hash.update(&buffer[..count]);
             remaining -= count as u64;
         }
-        if format!("{:x}", hash.finalize()) != digest {
+        if cais_core::hex(hash.finalize()) != digest {
             return Err(CaisError::new(
                 ErrorCode::InvalidRequest,
                 "Upload checksum does not match.",
@@ -1468,7 +1468,7 @@ fn load_policy(path: &Path) -> Result<(ServerConfig, HostSettings, String)> {
             .ok_or_else(internal)?
             .to_owned();
     }
-    let digest = format!("{:x}", Sha256::digest(&bytes));
+    let digest = cais_core::hex(Sha256::digest(&bytes));
     Ok((policy, settings, digest))
 }
 fn require_root() -> Result<()> {
@@ -1675,7 +1675,7 @@ fn quote(value: &str) -> String {
     )
 }
 fn short_id(project: &str) -> String {
-    format!("{:x}", Sha256::digest(project.as_bytes()))[..12].into()
+    cais_core::hex(Sha256::digest(project.as_bytes()))[..12].into()
 }
 fn unit_name(project: &str) -> String {
     format!("cais-app-{}.service", short_id(project))
@@ -1690,10 +1690,9 @@ fn now() -> u64 {
         .as_secs()
 }
 fn hash_json(value: &impl Serialize) -> Result<String> {
-    Ok(format!(
-        "{:x}",
-        Sha256::digest(serde_json::to_vec(value).map_err(|_| internal())?)
-    ))
+    Ok(cais_core::hex(Sha256::digest(
+        serde_json::to_vec(value).map_err(|_| internal())?,
+    )))
 }
 fn complete(record: &Record) -> Result<()> {
     // Recovery/list/port allocation can inspect older invalid configurations, but no
