@@ -5,33 +5,188 @@
   </picture>
 </h1>
 
-Declarative application operations for people and agents, using Rust, JSON and SSH.
+<p align="center">
+  Deploy and operate applications on your own Linux server, over SSH.<br>
+  For people and for agents. No containers, no daemon, no web panel.
+</p>
+
+<p align="center">
+  <a href="https://github.com/jordyfontoura/cais/actions/workflows/ci.yml"><img src="https://github.com/jordyfontoura/cais/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+</p>
 
 > **Pre-release (0.1 beta).** Interfaces can still change before 1.0, and the project
 > has had no external security audit. The server side runs a root broker through sudo:
 > read [SECURITY.md](SECURITY.md) before installing it on a machine you care about.
 
-What works today: registration, packaging, publication, environment, restart and status
-of isolated applications on Linux/systemd ([native mode](docs/NATIVE.md)), plus optional
-PostgreSQL databases with private credential export, unprivileged psql and SSH tunnels
-([PostgreSQL operations](docs/POSTGRES.md)), and optional Caddy routes and backup
-registration ([integrations](docs/INTEGRATIONS.md)), and project metadata with a catalog
-file for dashboards and other consumers ([catalog](docs/CATALOG.md)). Agents can use the
-same operations through a local [MCP server](docs/MCP.md). What is planned before 1.0
-is in [the roadmap](docs/ROADMAP.md).
+## What it is
 
-To install it, follow [the quickstart](docs/QUICKSTART.md). The releases page has
-binaries for the Linux host and for Windows, macOS and Linux clients.
-Installations managed by other tools can be referenced for read-only `list`/`status`;
-their deployments, services and databases stay with those tools.
+Cais (Portuguese for *quay*) takes an application you built, uploads it to a Linux
+server you already have, and runs it as a systemd service under its own account. You
+describe the application in a small JSON file and drive everything with one command-line
+tool, or let an agent drive the same operations through MCP.
 
-Licensed under [Apache 2.0](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) to build,
-test and propose changes.
+* **Nothing stays running on the server.** The server program starts when you connect
+  over SSH and exits when the request ends. There is no daemon, no listening port and
+  no web administration interface.
+* **Identity comes from SSH and Linux accounts.** There are no Cais users, passwords or
+  tokens. An administrative policy file says which account may operate which project.
+* **Deployment is a separate, narrow identity.** Each project gets its own deployment
+  key that can publish that project and nothing else. Setting the environment and
+  restarting stay with the operator.
+* **One small privileged component.** A root broker accepts a fixed list of typed
+  operations. It cannot run an arbitrary command, and a caller cannot tell it who they
+  are or which policy to use.
+* **Results you can trust in a script.** Every command prints one JSON result and
+  returns a documented exit code. Nothing is retried behind your back, and an operation
+  that may or may not have completed is reported as an unknown outcome, never as a
+  success.
+* **Optional pieces stay optional.** PostgreSQL databases, public routes through Caddy,
+  backup registration and a catalog for dashboards are available, and none is required.
 
-## Try it locally
+## A first look
 
-Requires Rust 1.88 or newer (verified with 1.98), Cargo, and OpenSSH 8.5+ for remote commands.
-Run from this directory:
+A project is described by a `cais.json` like this one, from
+[`examples/demo-python`](examples/demo-python):
+
+```json
+{
+  "schema_version": 1,
+  "project": "hello-python",
+  "artifact": { "directory": "./dist", "publish": ["app.py"] },
+  "app": { "kind": "http", "runtime": "python", "entrypoint": "app.py", "health": "/health" }
+}
+```
+
+Registering and publishing it looks like this:
+
+```sh
+# Once, as the operator: check the plan and register the project with its deployment key.
+cais plan     --file cais.json --target operator --config client.json --json > plan.json
+cais register --file cais.json --plan plan.json --deploy-public-key deploy_key.pub --target operator --config client.json --json
+
+# Every release: package, read the current state, and publish as the deployment identity.
+cais package --file cais.json --output hello-python.tar.gz --json
+cais status hello-python --target operator --config client.json --json > status.json
+cais deploy  --file cais.json --artifact hello-python.tar.gz --expected status.json --target deploy --config client.json --json
+```
+
+An HTTP deployment is confirmed only when the application answers on its health path, on a
+loopback port, from its own account. `--expected` carries the state you last read, so a
+change you did not see makes the command refuse instead of overwriting it. The
+[quickstart](docs/QUICKSTART.md) walks through the whole journey on a new host.
+
+## How it works
+
+```text
+ your machine                          Linux host
+ ------------                          ----------
+ cais (CLI or MCP)  -- SSH -->  cais-server   runs as your login, without privileges
+                                    |
+                                    |  sudo, fixed path, no arguments
+                                    v
+                                cais-broker   root, fixed operations, reads the policy
+                                    |
+                                    v
+                                one systemd service per application,
+                                each with its own account and loopback port
+```
+
+Three configuration files have separate owners:
+
+* `cais.json`: the project's intent, safe to commit, without secrets.
+* A client JSON file: named SSH targets and the **paths** of private keys and
+  `known_hosts`, never the keys themselves.
+* `/etc/cais/server.json`: written by the host administrator; says who may operate what
+  and which hostnames, databases and backups are delegated to each project.
+
+Host key verification is mandatory, and the client never accepts an unknown host. The
+details of the transport are in [CLIENT.md](docs/CLIENT.md) and
+[PROTOCOL.md](docs/PROTOCOL.md).
+
+## What works today
+
+| Area | What you get | Guide |
+|---|---|---|
+| Applications | Register, package, publish, set the environment, restart and read the status of HTTP and static applications on Linux with systemd | [NATIVE.md](docs/NATIVE.md) |
+| PostgreSQL (optional) | A database per project, private credential export, unprivileged `psql` and time-limited SSH tunnels | [POSTGRES.md](docs/POSTGRES.md) |
+| Public routes (optional) | Routes through Caddy on hostnames the policy delegates to the project | [INTEGRATIONS.md](docs/INTEGRATIONS.md) |
+| Backups (optional) | Registration of what a project needs backed up, with reported coverage | [INTEGRATIONS.md](docs/INTEGRATIONS.md) |
+| Metadata and catalog (optional) | Project metadata and a catalog file for dashboards and other consumers | [CATALOG.md](docs/CATALOG.md) |
+| Agents | The same operations as typed tools in a local MCP server | [MCP.md](docs/MCP.md) |
+
+Installations managed by other tools can be referenced for read-only `list` and
+`status`; their deployments, services and databases stay with those tools. What is
+planned before 1.0, and what is out of scope, is in [the roadmap](docs/ROADMAP.md).
+
+## Install
+
+Follow [the quickstart](docs/QUICKSTART.md). The
+[releases page](https://github.com/jordyfontoura/cais/releases) has archives with
+checksums for the Linux host and for Windows, macOS and Linux clients.
+
+* **Host:** Linux x86_64 with systemd, OpenSSH server and sudo, glibc 2.36 or newer
+  (Debian 12, Ubuntu 24.04 and later). Exercised on Debian 13.
+* **Client:** Windows, macOS or Linux with OpenSSH 8.5 or newer.
+* **Applications:** Node, Python or a Linux executable, with interpreters installed by
+  the administrator. Nothing is installed as root during a deployment.
+
+Do not use it to adopt an existing installation: Cais manages only what it creates.
+
+## For scripts and agents
+
+With `--json`, a command prints one result on stdout and nothing on stderr. A result has
+`schema_version`, `outcome` and either `data` or `error`. Secrets never appear in a
+result; they travel only through an explicit private-file export.
+
+| Exit code | Meaning |
+|---|---|
+| `0` | Success |
+| `1` | Internal error |
+| `2` | Invalid configuration or usage |
+| `3` | Denied by identity or policy |
+| `4` | Incompatible or unsupported |
+| `5` | Transport, protocol or deadline |
+| `6` | Busy or conflict |
+| `7` | The operation failed |
+| `8` | Unknown outcome of a mutation: read the status before repeating anything |
+
+Two commands differ on purpose: `db-tunnel` is long-lived and prints readiness and
+closing events as NDJSON, and `db-psql` is a human session that refuses JSON mode.
+`--help`, `--version` and the raw schema export keep their usual output.
+
+`cais mcp` exposes the same operations as typed tools for agents; see
+[MCP.md](docs/MCP.md). The schemas in [`schemas/`](schemas) are generated from the Rust
+types and cover structure; `cais validate` adds the semantic checks, such as overlapping
+paths and policy references. Validation is local: it does not check that artifacts
+exist, resolve DNS or prove that a service is healthy.
+
+## Security
+
+The model and its known limits are described in [SECURITY.md](SECURITY.md); read it
+before installing the server side. Please report suspected vulnerabilities privately,
+through the repository's *Report a vulnerability* button, and not in a public issue.
+
+Every release archive has a checksum, and releases after 0.1.0-beta.1 also carry signed
+build provenance. The quickstart shows how to check both.
+
+## Documentation
+
+| Page | Contents |
+|---|---|
+| [QUICKSTART.md](docs/QUICKSTART.md) | Install a host, configure a client and publish the example |
+| [NATIVE.md](docs/NATIVE.md) | Application operations, state, failures and recovery |
+| [POSTGRES.md](docs/POSTGRES.md) | Databases, credentials, `psql` and tunnels |
+| [INTEGRATIONS.md](docs/INTEGRATIONS.md) | Caddy routes and backup registration |
+| [CATALOG.md](docs/CATALOG.md) | Project metadata and the catalog file |
+| [MCP.md](docs/MCP.md) | The MCP server for agents |
+| [CLIENT.md](docs/CLIENT.md) | Client behaviour, SSH targets and the planning server |
+| [PROTOCOL.md](docs/PROTOCOL.md) | The control protocol |
+| [VERIFICATION.md](docs/VERIFICATION.md) | Running the tests and the journeys against local fixtures |
+| [ROADMAP.md](docs/ROADMAP.md) | Design decisions, what is planned and what is out of scope |
+
+## Build from source
+
+Requires Rust 1.88 or newer and Cargo.
 
 ```sh
 cargo build --workspace --locked
@@ -40,125 +195,16 @@ cargo run --bin cais -- validate --file examples/cais.json --json
 cargo run --bin cais -- schema project
 ```
 
-Windows defaults to the native `%SystemRoot%/System32/OpenSSH/ssh.exe`, avoiding the
-incompatible Git/MSYS executable on PATH. Set `ssh_executable` in a target to use a
-different local OpenSSH binary explicitly. Linux/macOS use `ssh` from PATH by default.
-
-Configuration validation is deliberately local: it does not check that artifacts exist,
-resolve DNS, inspect systemd or prove a service is healthy. Paths are relative POSIX
-paths even on Windows; declare Linux executable permissions explicitly.
-
-Three configurations have separate owners:
-
-* `cais.json`: versionable project intent, without secrets.
-* A client JSON file: named SSH targets and private key/known_hosts **paths**, never keys.
-* `/etc/cais/server.json`: administrator-controlled project access and delegated hosts.
-
-Examples use fictional accounts and domains. Nothing requires a specific host, domain,
-reverse proxy, identity provider, database or backup service. A named access provider in a policy is a
-declaration for planning, not an implemented authentication integration.
-
-## Linux planning server
-
-This section describes the unprivileged foundation when `host` is omitted. Native
-application management uses the separate root broker described in [NATIVE.md](docs/NATIVE.md).
-
-An administrator installs the Linux executable at `/usr/local/bin/cais-server` and a
-policy like `examples/server.json` at `/etc/cais/server.json`. The server and policy
-should be administratively owned. Policy files must not be group/world writable;
-parents must have trusted ownership and modes, without symlinks. A private installation
-owned by the process account is also supported, without creating an elevated boundary.
-Writable parents are rejected even with a sticky bit: do not put host policies under
-`/tmp`. An operator-owned policy provides no protection from that operator's own shell.
-
-Run the server as the SSH login, **without sudo**. It uses the operating-system account
-lookup and ignores client identity claims and environment variables such as `SUDO_USER`.
-Only the fixed operations in the protocol are accepted. One process handles one request.
-No daemon, listener, new sudo rule, mutable host registry or production install is needed
-for this phase. Project policies describe delegated names, not existing app deployments.
-
-Copy `examples/client.json` outside the repository and configure a verified host key and
-an appropriate operator identity. Paths to identity, SSH config and known_hosts files are
-relative to that client configuration file. No implicit home or `~` expansion is performed.
-When `port` is omitted, the port from the OpenSSH alias is preserved. An explicit `port`
-overrides it. Agent/X11/port forwarding, local commands, host-key updates, DNS host-key
-trust and external known-hosts commands are disabled for control sessions.
-SSH connection multiplexing and tunnel devices are disabled too: a control session
-must establish its own connection and cannot inherit another master's host trust or identity.
-Remote executable paths must be absolute POSIX paths without whitespace or shell syntax.
-If an administrator needs a nondefault server policy, use an administratively installed
-wrapper executable; the wire protocol cannot choose a configuration path.
-
-```sh
-cais capabilities --target staging --config /path/to/client.json --json
-cais list --target staging --config /path/to/client.json --json
-cais plan --file cais.json --target staging --config /path/to/client.json --json
-```
-
-OpenSSH's host key verification is mandatory. Obtain the host public key through a
-trusted channel; discovery by `ssh-keyscan` alone is not verification. Supply a dedicated
-`ssh_config` to avoid inheriting unrelated aliases/proxies if appropriate. The client
-uses BatchMode, no PTY, strict host checking, and an overall deadline. It emits fixed
-transport errors rather than forwarding arbitrary SSH stderr.
-
-`plan` is explicitly a **non-executable preview**: it validates the project and delegated
-hostname/access profile/backup request. It does not compare against deployed files or
-verify provider availability. The output says `execution_supported: false` and
-`current_runtime_state: not_observed`. A digest identifies normalized project intent,
-not an approval token or proof of an operation running exactly once.
-
-## Agent interface
-
-`--json` emits one result on stdout and no CLI diagnostic on stderr. A result has
-`schema_version`, `outcome` and either `data` or `error`. Schema export is intentionally
-raw JSON; `--help` and `--version` retain their standard display behavior. The long-lived
-`db-tunnel` command instead emits documented readiness/closed NDJSON events. `db-psql`
-is a human session and refuses JSON mode.
-
-Exit codes: `0` success; `1` internal error; `2` invalid config/usage; `3` denied by
-identity/policy; `4` incompatible/unsupported; `5` transport/protocol/deadline;
-`6` busy/conflict; `7` operation failed; `8` unknown mutation outcome.
-No command is automatically retried. No partial operation is inferred to have succeeded.
-Native mutating operations require current revisions and server authorization. Secrets
-use only the explicit private-file transfer, never JSON results. `cais mcp` exposes the
-same operations as typed tools; see [MCP.md](docs/MCP.md).
-
-Schemas in `schemas/` are generated from the Rust types. They cover structural rules;
-use `cais validate` for semantic checks such as path overlap and policy references.
-
-## Verification
-
-```sh
-cargo test --workspace --locked
-python tools/export_schemas.py --client target/debug/cais --check
-```
-
-`python3 tools/verify_client.py` runs the client against a private sshd on the current
-machine, without Docker or root: host-key trust, key permissions, adversarial peers,
-private exports and an MCP call. CI runs it on Linux against the planning server and on
-macOS against a protocol peer, since the server itself runs only on Linux.
-
-Tests also exercise OpenSSH's effective configuration using `ssh -G`. For Linux Docker
-tests, build `docker build -t cais-rust-test:local -f tests/runner/Dockerfile .` and use
-that image with the source mounted at `/work`, a Cargo cache volume, and a separate
-target directory such as `target/linux`.
-
-On Windows use `target/debug/cais.exe`. The SSH journey uses a real local Docker sshd,
-real CLI, and Linux server with synthetic keys, including denials, host-key mismatch,
-bad peers, deadline, spoofed environment, and writable policy rejection. Build a Linux
-server **and client** with Rust locally or in `rust:1.98-slim` (keep its target directory
-separate). The helper requires `target/linux/debug/cais-server` and `target/linux/debug/cais`:
-
-```sh
-python tools/verify_ssh.py --client target/debug/cais.exe --server target/linux/debug/cais-server --report .local/verification/windows-ssh.json
-```
-
-The test image is defined in `tests/ssh/Dockerfile`; Docker and Python 3.9+ are needed.
-The helper generates synthetic keys in a temporary directory and removes its own
-container in `finally`. It never uses a production SSH alias, key or credential.
+The server and the broker work only when built on Linux. See
+[CONTRIBUTING.md](CONTRIBUTING.md) to build, test and propose changes.
 
 ## Project boundaries
 
 Cais is standalone. Dashboards, monitors and other tools integrate by reading the
-[catalog](docs/CATALOG.md); Cais never depends on one of them to operate, and none is required.
-The repository contains the implementation and fictional examples.
+[catalog](docs/CATALOG.md); Cais never depends on one of them to operate, and none is
+required. Nothing requires a specific host, domain, reverse proxy, identity provider,
+database or backup service. The examples use fictional accounts and domains.
+
+## License
+
+[Apache License 2.0](LICENSE).
